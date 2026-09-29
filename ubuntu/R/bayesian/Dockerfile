@@ -4,21 +4,15 @@
 # Installs R 4.6.1 and helpful packages
 # Install cmdstan via cmdstanr R package
 
-FROM databricksruntime/minimal:17.3-LTS@sha256:03880bef439fc734f2fe07ebb7dac06a40e77ec81578006d5c66a430099e00b2
+FROM databricksruntime/standard:18.3-LTS@sha256:7d0dbb2a5b07412d5f0373a62dcf6e64ba602fda9d9e341598a39c3d5c14c0eb
 
 # Suppress interactive configuration prompts
 ENV DEBIAN_FRONTEND=noninteractive \
     CMDSTAN=/opt/cmdstan
 
-# Install python and virtualenv for Spark and Notebooks
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-    python3.12 \
-    virtualenv \
-  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
 # Install dependencies for R packages
 RUN apt-get update \
+  && apt-get upgrade -y \
   && apt-get install -y --no-install-recommends \
     libgdal-dev \
     gdal-bin \
@@ -60,14 +54,14 @@ RUN install -d -m 0755 /etc/apt/keyrings \
 # hwriterPlus is used by Databricks to display output in notebook cells
 # hwriterPlus is removed for newer version of R, so we hardcode the dependency to archived version
 # Rserve allows Spark to communicate with a local R process to run R code
-ARG P3M_SNAPSHOT=2026-07-14
+ARG P3M_SNAPSHOT=2026-09-25
 RUN Rscript -e "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/__linux__/noble/${P3M_SNAPSHOT}')); install.packages('pak')" \
  && Rscript -e "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/__linux__/noble/${P3M_SNAPSHOT}')); pak::pak(c('hwriter', 'TeachingDemos', 'htmltools'))" \
  && Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/hwriterPlus/hwriterPlus_1.0-3.tar.gz', repos=NULL, type='source')" \
  && Rscript -e "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/__linux__/noble/${P3M_SNAPSHOT}')); pak::pak('Rserve')"
  
 # Install project dependencies
-RUN Rscript -e "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/__linux__/noble/${P3M_SNAPSHOT}')); pak::pak(c('data.table', 'sparklyr', 'sf', 'tidyverse', 'brms', 'arcgisutils', 'httr2', 'tinyplot'))" \
+RUN Rscript -e "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/__linux__/noble/${P3M_SNAPSHOT}')); pak::pak(c('data.table', 'sparklyr', 'sf', 'tidyverse', 'brms', 'arcgisutils', 'httr2', 'tinyplot', 'osrm', 'osrm.backend', 'mirai', 'carrier', 'nanoparquet'))" \
  && Rscript -e "options(repos = c(STAN = 'https://stan-dev.r-universe.dev')); install.packages('cmdstanr')"
 
 # Install cmdstan
@@ -77,6 +71,3 @@ RUN Rscript -e "library(cmdstanr); dir.create(Sys.getenv('CMDSTAN'), mode = '075
 # Cleanup
 RUN Rscript -e "pak::cache_clean()" \
  && rm -rf /tmp/* /var/tmp/* /root/.cache/R
-
-# Initialize the default environment that Spark and notebooks will use
-RUN virtualenv -p python3.12 --system-site-packages /databricks/python3
