@@ -7,6 +7,9 @@
 manually from the Actions tab. It requires no secrets or Databricks workspace
 and does not publish an image.
 
+BuildKit caches intermediate layers in GitHub Actions to avoid recompiling
+unchanged R packages and CmdStan on every run.
+
 The job lints the workflow and Dockerfile, runs Docker build checks, and builds
 the actual pinned `linux/amd64` image. Offline container smoke tests check the
 inherited `/databricks/python3` environment, load every explicitly installed R
