@@ -28,7 +28,7 @@ model_file <- cmdstanr::write_stan_file(
   "parameters { real y; } model { y ~ normal(0, 1); }",
   dir = tempdir()
 )
-model <- cmdstanr::cmdstan_model(model_file, cpp_options = list(stan_threads = FALSE))
+model <- cmdstanr::cmdstan_model(model_file, cpp_options = list(stan_threads = TRUE))
 fit <- model$sample(
   chains = 1, parallel_chains = 1, seed = 123,
   iter_warmup = 50, iter_sampling = 50, refresh = 0,

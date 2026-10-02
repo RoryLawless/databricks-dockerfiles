@@ -68,8 +68,9 @@ RUN Rscript -e "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/_
 RUN Rscript -e "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/__linux__/noble/${P3M_SNAPSHOT}')); pak::pak(c('data.table', 'sparklyr', 'sf', 'tidyverse', 'brms', 'arcgisutils', 'httr2', 'tinyplot', 'osrm', 'osrm.backend', 'mirai', 'carrier', 'nanoparquet'))" \
  && Rscript -e "options(repos = c(STAN = 'https://stan-dev.r-universe.dev')); install.packages('cmdstanr')"
 
-# Install cmdstan
-RUN Rscript -e "library(cmdstanr); dir.create(Sys.getenv('CMDSTAN'), mode = '0755'); cmdstanr::install_cmdstan(dir = Sys.getenv('CMDSTAN'), cores = parallel::detectCores())" \
+# Prebuild threaded artifacts so ordinary users can compile models without
+# writing into the shared, root-owned CmdStan installation.
+RUN Rscript -e "library(cmdstanr); dir.create(Sys.getenv('CMDSTAN'), mode = '0755'); cmdstanr::install_cmdstan(dir = Sys.getenv('CMDSTAN'), cores = parallel::detectCores(), cpp_options = list(stan_threads = TRUE))" \
  && chmod -R a+rX /opt/cmdstan
 
 # Cleanup
