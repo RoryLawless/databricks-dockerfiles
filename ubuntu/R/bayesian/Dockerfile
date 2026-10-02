@@ -6,6 +6,9 @@
 
 FROM databricksruntime/standard:18.3-LTS@sha256:7d0dbb2a5b07412d5f0373a62dcf6e64ba602fda9d9e341598a39c3d5c14c0eb
 
+# Preserve failures in the CRAN key download and verification pipelines.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Suppress interactive configuration prompts
 ENV DEBIAN_FRONTEND=noninteractive \
     CMDSTAN=/opt/cmdstan
@@ -45,6 +48,7 @@ RUN install -d -m 0755 /etc/apt/keyrings \
   && apt-get install --yes \
     libssl-dev \
     r-base=${R_VERSION} \
+    r-base-core=${R_VERSION} \
     r-base-dev=${R_VERSION} \
     r-recommended=${R_VERSION} \
   && rm /etc/apt/sources.list.d/cran.list /etc/apt/keyrings/cran.gpg \
@@ -64,8 +68,10 @@ RUN Rscript -e "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/_
 RUN Rscript -e "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/__linux__/noble/${P3M_SNAPSHOT}')); pak::pak(c('data.table', 'sparklyr', 'sf', 'tidyverse', 'brms', 'arcgisutils', 'httr2', 'tinyplot', 'osrm', 'osrm.backend', 'mirai', 'carrier', 'nanoparquet'))" \
  && Rscript -e "options(repos = c(STAN = 'https://stan-dev.r-universe.dev')); install.packages('cmdstanr')"
 
-# Install cmdstan
+# Prebuild default and threaded artifacts so ordinary users can compile models without
+# writing into the shared, root-owned CmdStan installation.
 RUN Rscript -e "library(cmdstanr); dir.create(Sys.getenv('CMDSTAN'), mode = '0755'); cmdstanr::install_cmdstan(dir = Sys.getenv('CMDSTAN'), cores = parallel::detectCores())" \
+ && Rscript -e "cmdstanr::cmdstan_model(cmdstanr::write_stan_file('parameters { real y; } model { y ~ normal(0, 1); }'), cpp_options = list(stan_threads = TRUE))" \
  && chmod -R a+rX /opt/cmdstan
 
 # Cleanup
