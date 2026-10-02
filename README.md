@@ -18,9 +18,9 @@ as a non-root user. A build failure includes unavailable base digests, R version
 pins, package snapshots, or package dependencies. Installation warnings that
 leave a package missing are caught by the smoke tests.
 
-CmdStan is built with threading enabled during image construction, so users
-can compile threaded models without rebuilding artifacts in the shared
-root-owned installation.
+CmdStan's default and threaded artifacts are built during image construction,
+so users can compile either kind of model without rebuilding artifacts in the
+shared root-owned installation. The smoke test covers both configurations.
 
 To reproduce the build and R smoke checks locally:
 

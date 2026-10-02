@@ -28,12 +28,17 @@ model_file <- cmdstanr::write_stan_file(
   "parameters { real y; } model { y ~ normal(0, 1); }",
   dir = tempdir()
 )
-model <- cmdstanr::cmdstan_model(model_file, cpp_options = list(stan_threads = TRUE))
-fit <- model$sample(
-  chains = 1, parallel_chains = 1, threads_per_chain = 1, seed = 123,
-  iter_warmup = 50, iter_sampling = 50, refresh = 0,
-  output_dir = tempdir()
-)
-stopifnot(all(fit$return_codes() == 0L))
-stopifnot(all(is.finite(fit$draws("y", format = "matrix"))))
+for (cpp_options in list(list(), list(stan_threads = TRUE))) {
+  model <- cmdstanr::cmdstan_model(
+    model_file, cpp_options = cpp_options, force_recompile = TRUE
+  )
+  fit <- model$sample(
+    chains = 1, parallel_chains = 1, seed = 123,
+    threads_per_chain = if (isTRUE(cpp_options$stan_threads)) 1 else NULL,
+    iter_warmup = 50, iter_sampling = 50, refresh = 0,
+    output_dir = tempdir()
+  )
+  stopifnot(all(fit$return_codes() == 0L))
+  stopifnot(all(is.finite(fit$draws("y", format = "matrix"))))
+}
 message("Bayesian image smoke checks passed")
