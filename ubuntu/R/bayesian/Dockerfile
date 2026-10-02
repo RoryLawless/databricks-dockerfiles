@@ -6,6 +6,9 @@
 
 FROM databricksruntime/standard:18.3-LTS@sha256:7d0dbb2a5b07412d5f0373a62dcf6e64ba602fda9d9e341598a39c3d5c14c0eb
 
+# Preserve failures in the CRAN key download and verification pipelines.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Suppress interactive configuration prompts
 ENV DEBIAN_FRONTEND=noninteractive \
     CMDSTAN=/opt/cmdstan
@@ -45,6 +48,7 @@ RUN install -d -m 0755 /etc/apt/keyrings \
   && apt-get install --yes \
     libssl-dev \
     r-base=${R_VERSION} \
+    r-base-core=${R_VERSION} \
     r-base-dev=${R_VERSION} \
     r-recommended=${R_VERSION} \
   && rm /etc/apt/sources.list.d/cran.list /etc/apt/keyrings/cran.gpg \

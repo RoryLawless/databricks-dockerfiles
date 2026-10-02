@@ -1,0 +1,58 @@
+name: Bayesian R image
+
+on:
+  pull_request:
+    paths:
+      - ubuntu/R/bayesian/**
+      - .github/workflows/bayesian-image.yml
+  push:
+    branches: [main]
+    paths:
+      - ubuntu/R/bayesian/**
+      - .github/workflows/bayesian-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bayesian-image-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Lint workflow
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 \
+            -color .github/workflows/bayesian-image.yml
+      - name: Lint Dockerfile
+        # OS packages intentionally follow the Ubuntu/CRAN repositories.
+        # apt-get upgrade and the existing R install's recommends remain advisory.
+        run: |
+          docker run --rm -i hadolint/hadolint:2.12.0 \
+            --ignore DL3008 --ignore DL3005 --ignore DL3015 \
+            < ubuntu/R/bayesian/Dockerfile
+      - name: Check Docker build configuration
+        run: docker buildx build --check --platform linux/amd64 ubuntu/R/bayesian
+      - name: Build image (no registry push)
+        run: |
+          docker build --pull --platform linux/amd64 --progress plain \
+            --tag bayesian-r:ci ubuntu/R/bayesian
+      - name: Check inherited Python environment
+        run: |
+          docker run --rm --network none --entrypoint /databricks/python3/bin/python3 \
+            bayesian-r:ci -c 'import sys, pip, ipykernel; assert sys.prefix == "/databricks/python3", sys.prefix; print(sys.version)'
+      - name: Check R packages and compile and sample a Stan model
+        # An arbitrary non-root user checks that packages and CmdStan are shared.
+        # No network is needed after the image has been built.
+        run: |
+          docker run --rm --network none --user 10001:10001 \
+            --env HOME=/tmp --workdir /tmp \
+            --mount "type=bind,source=$PWD/ubuntu/R/bayesian/tests,target=/tests,readonly" \
+            --entrypoint Rscript bayesian-r:ci /tests/smoke.R
