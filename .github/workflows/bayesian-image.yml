@@ -35,8 +35,8 @@ jobs:
         # OS packages intentionally follow the Ubuntu/CRAN repositories.
         # apt-get upgrade and the existing R install's recommends remain advisory.
         run: |
-          docker run --rm -i hadolint/hadolint:2.12.0 \
-            --ignore DL3008 --ignore DL3005 --ignore DL3015 \
+          docker run --rm -i hadolint/hadolint:2.12.0 hadolint \
+            --ignore DL3008 --ignore DL3005 --ignore DL3015 - \
             < ubuntu/R/bayesian/Dockerfile
       - name: Check Docker build configuration
         run: docker buildx build --check --platform linux/amd64 ubuntu/R/bayesian
